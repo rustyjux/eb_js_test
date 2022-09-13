@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/qgis2web.css"><link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/leaflet-search.css">
+        <link rel="stylesheet" href="css/leaflet.locationlist.css">
+        <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        * {padding:0; margin:0;}
+        html,body {width:100%; height:100%;}
+        body, #map {background: rgb(41, 41, 41);}
+        #map {height: 100%;}
+
+        /* https://codepen.io/owenjam/pen/xRPMao */
+        .custom-popup .leaflet-popup-content-wrapper {
+        background: #2c3e50;
+        color: #fff;
+        font-size: 16px;
+        line-height: 24px;
+        border-radius: 0px;
+        }
+        .custom-popup .leaflet-popup-content-wrapper a {
+            color: rgba(255,255,255,0.1);
+        }
+        .custom-popup .leaflet-popup-tip-container {
+        width:30px;
+        height:15px;
+        }
+        .custom-popup .leaflet-popup-tip {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+        }
+        </style>
+        <title></title>
+    </head>
+    <body>
+        <div class="custom-popup" id="map">
+        </div>
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/multi-style-layer.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/proj4.js"></script>
+        <script src="js/proj4leaflet.js"></script>
+        <script src="js/leaflet-search.js"></script>
+        <script src="js/leaflet.locationlist.js"></script>
+        <script src="data/edvas_simp2_0.js"></script>
+        <script src="data/eds_simp2_1.js"></script>
+        <script src="data/edvas_green_2.js"></script>
+        <script>
+        var crs = new L.Proj.CRS('EPSG:3005', '+proj=aea +lat_0=45 +lon_0=-126 +lat_1=50 +lat_2=58.5 +x_0=1000000 +y_0=0 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs', {
+            resolutions: [2800, 1400, 700, 350, 175, 84, 42, 21, 11.2, 5.6, 2.8, 1.4, 0.7, 0.35, 0.14, 0.07],
+        });
+        var map = L.map('map', {
+            center: [54, -127],
+            zoom: 0,
+            crs: crs,         
+            continuousWorld: false,
+            worldCopyJump: false, 
+              // don't add the zoom control yet
+            zoomControl: false,
+            // disable drag and zoom handlers
+            dragging: false,
+            touchZoom: false,
+            doubleClickZoom: false,
+            scrollWheelZoom: false,
+            boxZoom: false,
+            keyboard: false,
+            tap: false
+        }).fitBounds([[47.15959969448485,-140.81580874992986],[60.91553521228535,-108.67730077266597]]);
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        
+        var popup = L.popup({
+            closeButton: true,
+            autoClose: true
+            })
+            .setLatLng([46,-148])
+            .setContent(`
+                <h3>2017 BC General Election Results</h3>
+                <p>
+                This map displays results from the 2017 BC General Election by both electoral districts (riding) and voting areas. </p>
+                <p>Electoral district winners are shown using coloured line patterns <img src='legend/eds_simp2_1_ndp2.png'>, 
+                    while voting area winners are shown using solid fill <img src='legend/edvas_simp2_0_liberal1.png'>.</p>
+                    <p>
+                    For voting areas where electoral district and voting area winners are the same, the diagonal lines are not visible, whereas
+                    in areas where they differ, the diagonal lines can be seen overlaying the voting area. Click the arrows ◀ ▶ below the layer list to 
+                    see a selection of areas where voting area winners differ from the district.</p>
+                    <p>Areas with a high percentage of green voters (greater than 30%) can be highlighted by turning on this layer <img src='legend/edvas_green_2.png'> in the layer list.</p>
+                    <p style="font-size: 12px"> Projection: NAD83 / BC Albers <br>
+                        Data from <a href="https://catalogue.data.gov.bc.ca/dataset/provincial-voting-results" style="color: #fff">Elections BC</a><br>
+                        Created by Russell Vinegar on April 4, 2022
+                        </p>
+                    <p style="text-align:center"> Click anywhere to get started
+                </p>
+                `)
+            .openOn(map);
+
+            map.once('popupclose', function(e){
+                map.setZoom(1);
+                // add the zoom control
+                L.control.zoom().addTo(map);
+                // enable drag and zoom handlers
+                map.dragging.enable();
+                map.touchZoom.enable();
+                map.doubleClickZoom.enable();
+                map.scrollWheelZoom.enable();
+                map.boxZoom.enable();
+                map.keyboard.enable();
+                if (map.tap) map.tap.enable();
+                });
+
+        
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+        }
+        function pop_edvas_simp2_0(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2"><strong><u>Voting area</u></strong><br /></td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">EDVA code</th>\
+                        <td>' + (feature.properties['edva_code_2'] !== null ? autolinker.link(feature.properties['edva_code_2'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">green</th>\
+                        <td>' + (feature.properties['green'] !== null ? autolinker.link(feature.properties['green'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">liberal</th>\
+                        <td>' + (feature.properties['liberal'] !== null ? autolinker.link(feature.properties['liberal'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">ndp</th>\
+                        <td>' + (feature.properties['ndp'] !== null ? autolinker.link(feature.properties['ndp'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">edva_winner</th>\
+                        <td>' + (feature.properties['edva_winner'] !== null ? autolinker.link(feature.properties['edva_winner'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2"><strong><u>Electoral district</u></strong><br /></td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">ed_winner</th>\
+                        <td>' + (feature.properties['ed_winner'] !== null ? autolinker.link(feature.properties['ed_winner'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">ed_abbreviation</th>\
+                        <td>' + (feature.properties['ed_abbreviation'] !== null ? autolinker.link(feature.properties['ed_abbreviation'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        function style_edvas_simp2_0_0(feature) {
+            switch(String(feature.properties['edva_winner'])) {
+                case 'green':
+                    return {
+                pane: 'pane_edvas_simp2_0',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(0,191,47,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'liberal':
+                    return {
+                pane: 'pane_edvas_simp2_0',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(64,86,235,1.0)',
+                interactive: true,
+            }
+                    break;
+                case 'ndp':
+                    return {
+                pane: 'pane_edvas_simp2_0',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(248,186,0,1.0)',
+                interactive: true,
+            }
+                    break;
+                default:
+                    return {
+                pane: 'pane_edvas_simp2_0',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(241,241,241,1.0)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_edvas_simp2_0');
+        map.getPane('pane_edvas_simp2_0').style.zIndex = 400;
+        map.getPane('pane_edvas_simp2_0').style['mix-blend-mode'] = 'normal';
+        var layer_edvas_simp2_0 = new L.geoJson(json_edvas_simp2_0, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_edvas_simp2_0',
+            layerName: 'layer_edvas_simp2_0',
+            pane: 'pane_edvas_simp2_0',
+            onEachFeature: pop_edvas_simp2_0,
+            style: style_edvas_simp2_0_0,
+        });
+        bounds_group.addLayer(layer_edvas_simp2_0);
+        map.addLayer(layer_edvas_simp2_0);
+        function pop_eds_simp2_1(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['fid'] !== null ? autolinker.link(feature.properties['fid'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['ed_abbreviation'] !== null ? autolinker.link(feature.properties['ed_abbreviation'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2"><strong>ed_name</strong><br />' + (feature.properties['ed_name'] !== null ? autolinker.link(feature.properties['ed_name'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">ed_winner</th>\
+                        <td>' + (feature.properties['ed_winner'] !== null ? autolinker.link(feature.properties['ed_winner'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        var pattern_eds_simp2_1_green = new L.StripePattern({
+            weight: 2,
+            spaceWeight: 20.0,
+            color: '#00bf2f',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_eds_simp2_1_green.addTo(map);
+        var pattern_eds_simp2_1_lib = new L.StripePattern({
+            weight: 2,
+            spaceWeight: 20.0,
+            color: '#4056eb',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_eds_simp2_1_lib.addTo(map);
+        var pattern_eds_simp2_1_ndp = new L.StripePattern({
+            weight: 2,
+            spaceWeight: 20.0,
+            color: '#f8ba00',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_eds_simp2_1_ndp.addTo(map);
+        var pattern_eds_simp2_1_0 = new L.StripePattern({
+            weight: 0.7,
+            spaceWeight: 3.0,
+            color: '#00bf2f',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_eds_simp2_1_0.addTo(map);
+        var pattern_eds_simp2_1_0 = new L.StripePattern({
+            weight: 0.7,
+            spaceWeight: 3.0,
+            color: '#4056eb',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_eds_simp2_1_0.addTo(map);
+        var pattern_eds_simp2_1_0 = new L.StripePattern({
+            weight: 0.7,
+            spaceWeight: 3.0,
+            color: '#f8ba00',
+            opacity: 1.0,
+            spaceOpacity: 0,
+            angle: 315
+        });
+        pattern_eds_simp2_1_0.addTo(map);
+        function style_eds_simp2_1_0(feature) {
+            switch(String(feature.properties['ed_winner'])) {
+                case 'green':
+                    return {
+                pane: 'pane_eds_simp2_1',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_eds_simp2_1_green,
+                interactive: false,
+            }
+                    break;
+                case 'liberal':
+                    return {
+                pane: 'pane_eds_simp2_1',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_eds_simp2_1_lib,
+                interactive: false,
+            }
+                    break;
+                case 'ndp':
+                    return {
+                pane: 'pane_eds_simp2_1',
+                stroke: false,
+                fillOpacity: 1,
+                fillPattern: pattern_eds_simp2_1_ndp,
+                interactive: false,
+            }
+                    break;
+            }
+        }
+        function style_eds_simp2_1_1(feature) {
+            switch(String(feature.properties['ed_winner'])) {
+                case 'green':
+                    return {
+                pane: 'pane_eds_simp2_1',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'round',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: false,
+            }
+                    break;
+                case 'liberal':
+                    return {
+                pane: 'pane_eds_simp2_1',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'round',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: false,
+            }
+                    break;
+                case 'ndp':
+                    return {
+                pane: 'pane_eds_simp2_1',
+                opacity: 1,
+                color: 'rgba(0,0,0,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'round',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: false,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_eds_simp2_1');
+        map.getPane('pane_eds_simp2_1').style.zIndex = 401;
+        map.getPane('pane_eds_simp2_1').style['mix-blend-mode'] = 'normal';
+        var layer_eds_simp2_1 = new L.geoJson.multiStyle(json_eds_simp2_1, {
+            attribution: '',
+            interactive: false,
+            dataVar: 'json_eds_simp2_1',
+            layerName: 'layer_eds_simp2_1',
+            pane: 'pane_eds_simp2_1',
+            onEachFeature: pop_eds_simp2_1,
+            styles: [style_eds_simp2_1_0,style_eds_simp2_1_1,]
+        });
+        bounds_group.addLayer(layer_eds_simp2_1);
+        map.addLayer(layer_eds_simp2_1);
+
+        function pop_edvas_green_2(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['fid'] !== null ? autolinker.link(feature.properties['fid'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['edva_code_2'] !== null ? autolinker.link(feature.properties['edva_code_2'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['green'] !== null ? autolinker.link(feature.properties['green'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['liberal'] !== null ? autolinker.link(feature.properties['liberal'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['ndp'] !== null ? autolinker.link(feature.properties['ndp'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['ed_winner'] !== null ? autolinker.link(feature.properties['ed_winner'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['ed_abbreviation'] !== null ? autolinker.link(feature.properties['ed_abbreviation'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['edva_winner'] !== null ? autolinker.link(feature.properties['edva_winner'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['green_pct'] !== null ? autolinker.link(feature.properties['green_pct'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        function style_edvas_green_2_0() {
+            return {
+                pane: 'pane_edvas_green_2',
+                opacity: 1,
+                color: '#00bf2f',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 3.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(0,191,47,0.2)',
+                interactive: false,
+            }
+        }
+        map.createPane('pane_edvas_green_2');
+        map.getPane('pane_edvas_green_2').style.zIndex = 402;
+        map.getPane('pane_edvas_green_2').style['mix-blend-mode'] = 'normal';
+        var layer_edvas_green_2 = new L.geoJson(json_edvas_green_2, {
+            attribution: '',
+            interactive: false,
+            dataVar: 'json_edvas_green_2',
+            layerName: 'layer_edvas_green_2',
+            pane: 'pane_edvas_green_2',
+            onEachFeature: pop_edvas_green_2,
+            style: style_edvas_green_2_0,
+        });
+        bounds_group.addLayer(layer_edvas_green_2);
+        // map.addLayer(layer_edvas_green_2);
+        
+        var baseMaps = {};
+        L.control.layers(baseMaps,{'Electoral Districts<br /><table><tr><td style="text-align: center;"><img src="legend/eds_simp2_1_green0.png" /></td><td>green</td></tr><tr><td style="text-align: center;"><img src="legend/eds_simp2_1_liberal1.png" /></td><td>liberal</td></tr><tr><td style="text-align: center;"><img src="legend/eds_simp2_1_ndp2.png" /></td><td>ndp</td></tr></table>': layer_eds_simp2_1,'Voting Areas<br /><table><tr><td style="text-align: center;"><img src="legend/edvas_simp2_0_green0.png" /></td><td>green</td></tr><tr><td style="text-align: center;"><img src="legend/edvas_simp2_0_liberal1.png" /></td><td>liberal</td></tr><tr><td style="text-align: center;"><img src="legend/edvas_simp2_0_ndp2.png" /></td><td>ndp</td></tr><tr><td style="text-align: center;"><img src="legend/edvas_simp2_0_3.png" /></td><td>ind / tie vote</td></tr></table>': layer_edvas_simp2_0, '<img src="legend/edvas_green_2.png" /> Green >30%': layer_edvas_green_2},{collapsed:false}).addTo(map);
+        setBounds();
+        var llist = L.control.locationlist({ locationsList : [ {title: 'BC', latlng: [55, -127], zoom: 1},
+                                                                {title: 'Victoria', latlng: [48.534,-123.586], zoom: 5},
+                                                                {title: 'Lower Mainland', latlng: [49.306,-122.795], zoom: 5},
+                                                                {title: 'Fraser-Nicola', latlng: [50.28,-121.57], zoom: 4}],		
+                                                            nextText : '▶',
+                                                            nextTitle : 'Next',
+                                                            prevText : '◀',
+                                                            prevTitle : 'Previous',
+                                                            showList : true });
+  	    map.addControl(llist);
+        </script>
+    </body>
+</html>
