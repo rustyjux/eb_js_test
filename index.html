@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/L.switchBasemap.css">
+        <link rel="stylesheet" href="css/L.Control.Locate.scss">
+        <link rel="stylesheet" href="css/qgis2web.css"><link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        </style>
+        <title></title>
+    </head>
+    <body>
+        <div id="map">
+        </div>
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/L.switchBasemap.js"></script>
+        <script src="js/leaflet-providers.js"></script>
+        <script src="js/L.Control.Locate.js"></script>
+                <script src="data/ACCHuts_1.js"></script>
+        <script>
+        var map = L.map('map', {
+            zoomControl:true, maxZoom:28, minZoom:4
+        }).fitBounds([[25.81754801718625,-153.65542976910115],[72.90300238965591,-59.637067599320034]]);
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+        }
+        map.createPane('pane_StamenTerrain_0');
+        map.getPane('pane_StamenTerrain_0').style.zIndex = 400;
+        var layer_StamenTerrain_0 = L.tileLayer('http://a.tile.stamen.com/terrain/{z}/{x}/{y}.png', {
+            pane: 'pane_StamenTerrain_0',
+            opacity: 1.0,
+            attribution: '<a href="http://maps.stamen.com/">Map tiles by Stamen Design, under CC BY 3.0. Data by OpenStreetMap, under ODbL</a>',
+            minZoom: 4,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 20
+        });
+        layer_StamenTerrain_0;
+        //map.addLayer(layer_StamenTerrain_0);
+        function pop_ACCHuts_1(feature, layer) {
+            var popupContent = '<h1 style="font-family: Trebuchet MS, Helvetica, sans-serif">' + (feature.properties['hut'] !== null ? autolinker.link(feature.properties['hut'].toLocaleString()) : '') + '</h1>\
+                <table>\
+                    <img src="'+ feature.properties.Image +'">\
+                    <tr>\
+                        <th scope="row">Sleeps</th>\
+                        <td>' + (feature.properties['Sleeps'] !== null ? autolinker.link(feature.properties['Sleeps'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Seasons</th>\
+                        <td>' + (feature.properties['Seasons'] !== null ? autolinker.link(feature.properties['Seasons'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Members</th>\
+                        <td>$' + (feature.properties['Members'] !== null ? autolinker.link(feature.properties['Members'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <th scope="row">Non-Members</th>\
+                        <td>$' + (feature.properties['Non-Members'] !== null ? autolinker.link(feature.properties['Non-Members'].toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>\
+                <a href="'+ feature.properties.URL +'">Details</a>\
+                ';
+
+            layer.bindPopup(popupContent, {maxHeight: 400});
+        }
+
+        function style_ACCHuts_1_0() {
+            return {
+                pane: 'pane_ACCHuts_1',
+        rotationAngle: 0.0,
+        rotationOrigin: 'center center',
+        icon: L.icon({
+            iconUrl: 'markers/cabin.svg',
+            iconSize: [27.36, 27.36]
+        }),
+                interactive: true,
+            }
+        }
+        map.createPane('pane_ACCHuts_1');
+        map.getPane('pane_ACCHuts_1').style.zIndex = 401;
+        map.getPane('pane_ACCHuts_1').style['mix-blend-mode'] = 'normal';
+        var layer_ACCHuts_1 = new L.geoJson(json_ACCHuts_1, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_ACCHuts_1',
+            layerName: 'layer_ACCHuts_1',
+            pane: 'pane_ACCHuts_1',
+            onEachFeature: pop_ACCHuts_1,
+            pointToLayer: function (feature, latlng) {
+                var context = {
+                    feature: feature,
+                    variables: {}
+                };
+                return L.marker(latlng, style_ACCHuts_1_0(feature));
+            },
+        });
+        bounds_group.addLayer(layer_ACCHuts_1);
+        map.addLayer(layer_ACCHuts_1);
+        var baseMaps = {};
+        L.control.layers(baseMaps,{'<img src="legend/ACCHuts_1.png" /> ACCHuts': layer_ACCHuts_1},{collapsed:false}).addTo(map);
+        setBounds();
+
+        new L.basemapsSwitcher([
+        {
+            layer: L.tileLayer.provider('Stamen.Terrain').addTo(map), //DEFAULT MAP
+            icon: './images/img1.PNG',
+            name: 'StamenTerrain'
+        },
+        {
+            layer: L.tileLayer.provider('Esri.WorldTopoMap'),
+            icon: './images/img2.PNG',
+            name: 'EsriWorldTopo'
+        },
+        {
+            layer: L.tileLayer.provider('OpenTopoMap'),
+            icon: './images/img3.PNG',
+            name: 'OpenTopoMap'
+        },
+        ], { position: 'topright' }).addTo(map);
+        
+        new L.Control.Locate({
+            initialZoomLevel: '8',
+            icon: './images/arrow.svg'
+            }).addTo(map);
+        </script>
+    </body>
+</html>
